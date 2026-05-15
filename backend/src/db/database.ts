@@ -38,9 +38,11 @@ db.exec(`
 `);
 
 // Add emp_code column to existing installs (idempotent)
-try { db.exec(`ALTER TABLE employees ADD COLUMN emp_code TEXT DEFAULT ''`); } catch {}
+try { db.exec(`ALTER TABLE employees ADD COLUMN emp_code TEXT DEFAULT ''`); }
+catch (e: any) { if (!e.message?.includes('duplicate column name')) throw e; }
 // Add team_id to employees (idempotent)
-try { db.exec(`ALTER TABLE employees ADD COLUMN team_id INTEGER REFERENCES teams(id) ON DELETE SET NULL`); } catch {}
+try { db.exec(`ALTER TABLE employees ADD COLUMN team_id INTEGER REFERENCES teams(id) ON DELETE SET NULL`); }
+catch (e: any) { if (!e.message?.includes('duplicate column name')) throw e; }
 
 // Drop old month-based roster_entries if it exists (schema migration)
 const hasOldSchema = db

@@ -16,7 +16,7 @@ router.get('/', authenticate, (_req, res) => {
   res.json(employees);
 });
 
-router.post('/', authenticate, (req: AuthRequest, res) => {
+router.post('/', authenticate, requireAdmin, (req: AuthRequest, res) => {
   const { name, emp_code, job_title, email, phone, team_id } = req.body;
   if (!name?.trim()) return res.status(400).json({ error: 'Name is required' });
 
@@ -70,7 +70,7 @@ router.put('/bulk-edit', authenticate, requireAdmin, (req: AuthRequest, res) => 
   res.json({ updated: ids.length });
 });
 
-router.put('/:id', authenticate, (req: AuthRequest, res) => {
+router.put('/:id', authenticate, requireAdmin, (req: AuthRequest, res) => {
   const { name, emp_code, job_title, email, phone, team_id } = req.body;
   if (!name?.trim()) return res.status(400).json({ error: 'Name is required' });
 
@@ -88,7 +88,7 @@ router.put('/:id', authenticate, (req: AuthRequest, res) => {
   res.json({ success: true });
 });
 
-router.delete('/:id', authenticate, (req: AuthRequest, res) => {
+router.delete('/:id', authenticate, requireAdmin, (req: AuthRequest, res) => {
   db.prepare('DELETE FROM employees WHERE id = ?').run(req.params.id);
   res.json({ success: true });
 });

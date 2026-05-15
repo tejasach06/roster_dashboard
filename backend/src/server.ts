@@ -23,5 +23,4 @@ app.use('/api/employees', employeeRoutes);
 
 app.listen(PORT, () => {
   console.log(`Roster backend running on http://localhost:${PORT}`);
-  console.log('Default admin credentials: admin / admin123');
 });
