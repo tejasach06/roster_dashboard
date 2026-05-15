@@ -8,10 +8,12 @@ A full-stack web application for managing monthly employee shift rosters. Suppor
 
 | Layer | Technology |
 |---|---|
-| Frontend | React 18, TypeScript, Vite, Tailwind CSS |
+| Frontend | React 18, TypeScript, Vite 6, Tailwind CSS |
 | Backend | Node.js, Express, TypeScript |
 | Database | SQLite (via `better-sqlite3`) |
-| Auth | JWT + bcrypt |
+| Auth | JWT + bcryptjs |
+| Security | Helmet, express-rate-limit, CORS restriction |
+| Process manager | PM2 |
 
 ---
 
@@ -38,6 +40,7 @@ A full-stack web application for managing monthly employee shift rosters. Suppor
 
 - Node.js 18+
 - npm
+- PM2 (for production): `npm install -g pm2`
 
 ### Install dependencies
 
@@ -47,13 +50,31 @@ npm run install:all
 
 This installs packages for both `backend/` and `frontend/`.
 
+### Configure environment
+
+```bash
+cp backend/.env.example backend/.env
+```
+
+Edit `backend/.env` and set at minimum:
+
+```env
+# Generate with: openssl rand -hex 32
+JWT_SECRET=your-secret-here
+
+# Origin of your frontend (no trailing slash)
+CORS_ORIGIN=http://localhost:5173
+```
+
+`JWT_SECRET` is **required** in production and will throw on startup if missing.
+
 ### Run in development
 
 ```bash
 npm run dev
 ```
 
-Starts both servers concurrently:
+Starts both servers concurrently (hot-reload on both):
 
 | Service | URL |
 |---|---|
@@ -67,7 +88,68 @@ Starts both servers concurrently:
 | Username | `admin` |
 | Password | `admin123` |
 
-> Change the admin password after first login via Admin Panel → Users.
+> Change the admin password after first login via Admin Panel → Users. Passwords must be at least 8 characters.
+
+---
+
+## Production Deployment
+
+### 1. Configure environment
+
+```bash
+cp backend/.env.example backend/.env
+# Set JWT_SECRET (openssl rand -hex 32) and CORS_ORIGIN
+```
+
+### 2. Build
+
+```bash
+npm run build
+```
+
+Compiles the backend TypeScript to `backend/dist/` and bundles the frontend to `frontend/dist/`.
+
+### 3. Start with PM2
+
+```bash
+npm start
+```
+
+### PM2 commands
+
+| Command | Description |
+|---|---|
+| `npm start` | Start backend under PM2 |
+| `npm run stop` | Stop the process |
+| `npm run restart` | Restart (after a redeploy) |
+| `npm run logs` | Tail live logs |
+| `npm run status` | Process health, uptime, memory |
+
+### 4. Survive server reboots (run once)
+
+```bash
+pm2 startup   # generates and prints a systemd command — run that output
+pm2 save      # saves current process list
+```
+
+### 5. Serve the frontend
+
+Serve `frontend/dist/` with nginx, Caddy, or any static file server and proxy `/api/*` to `http://localhost:3001`.
+
+Example nginx snippet:
+
+```nginx
+location /api/ {
+    proxy_pass http://localhost:3001;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+}
+
+location / {
+    root /path/to/frontend/dist;
+    try_files $uri $uri/ /index.html;
+}
+```
 
 ---
 
@@ -76,16 +158,17 @@ Starts both servers concurrently:
 ```
 roster_dashboard/
 ├── backend/
-│   └── src/
-│       ├── server.ts          # Express app entry point
-│       ├── db/database.ts     # SQLite schema + migrations
-│       ├── middleware/auth.ts # JWT authentication middleware
-│       └── routes/
-│           ├── auth.ts        # POST /api/auth/login
-│           ├── employees.ts   # CRUD + bulk-edit
-│           ├── teams.ts       # CRUD
-│           ├── users.ts       # CRUD + bulk-import
-│           └── roster.ts      # Grid data, copy, bulk-import
+│   ├── src/
+│   │   ├── server.ts           # Express app entry point
+│   │   ├── db/database.ts      # SQLite schema + migrations
+│   │   ├── middleware/auth.ts  # JWT authentication middleware
+│   │   └── routes/
+│   │       ├── auth.ts         # POST /api/auth/login
+│   │       ├── employees.ts    # CRUD + bulk-edit
+│   │       ├── teams.ts        # CRUD
+│   │       ├── users.ts        # CRUD + bulk-import
+│   │       └── roster.ts       # Grid data, copy, bulk-import
+│   └── .env.example            # Environment variable template
 ├── frontend/
 │   └── src/
 │       ├── pages/
@@ -100,8 +183,10 @@ roster_dashboard/
 │       │   ├── AuthContext.tsx
 │       │   └── ThemeContext.tsx
 │       └── constants/shifts.ts # Shift code definitions
+├── ecosystem.config.js         # PM2 process config
+├── logs/                       # PM2 log output (git-ignored)
 ├── roster.db                   # SQLite database (git-ignored)
-└── package.json                # Root scripts (dev, install:all)
+└── package.json                # Root scripts
 ```
 
 ---
@@ -121,31 +206,36 @@ roster_dashboard/
 
 ## API Overview
 
-All endpoints are prefixed with `/api`.
+All endpoints are prefixed with `/api`. All routes except `POST /auth/login` require a `Authorization: Bearer <token>` header.
 
-| Method | Path | Description |
-|---|---|---|
-| POST | `/auth/login` | Obtain JWT |
-| GET | `/employees` | List all employees (with team name) |
-| POST | `/employees` | Create employee |
-| PUT | `/employees/:id` | Update employee |
-| PUT | `/employees/bulk-edit` | Bulk update job title or team |
-| DELETE | `/employees/:id` | Delete employee |
-| GET | `/teams` | List teams |
-| POST | `/teams` | Create team |
-| GET | `/roster/team/:teamId` | Monthly roster for a team |
-| GET | `/roster/stats` | Shift totals per team (dashboard) |
-| POST | `/roster` | Create single entry |
-| PUT | `/roster/:id` | Update single entry |
-| DELETE | `/roster/:id` | Delete single entry |
-| DELETE | `/roster/employee/:id` | Remove employee from a month |
-| POST | `/roster/bulk` | Assign shift to multiple dates |
-| POST | `/roster/copy` | Copy month roster |
-| POST | `/roster/bulk-import` | CSV mass import |
-| GET | `/users` | List user accounts |
-| POST | `/users` | Create user account |
-| PUT | `/users/:id` | Update user account |
-| DELETE | `/users/:id` | Delete user account |
+Rate limits: login is capped at **10 requests / 15 min** per IP; all other API routes at **200 requests / min** per IP.
+
+| Method | Path | Auth | Description |
+|---|---|---|---|
+| POST | `/auth/login` | — | Obtain JWT |
+| GET | `/employees` | user | List all employees (with team name) |
+| POST | `/employees` | admin | Create employee |
+| PUT | `/employees/:id` | admin | Update employee |
+| PUT | `/employees/bulk-edit` | admin | Bulk update job title or team |
+| DELETE | `/employees/:id` | admin | Delete employee |
+| GET | `/teams` | user | List teams |
+| POST | `/teams` | admin | Create team |
+| PUT | `/teams/:id` | admin | Update team |
+| DELETE | `/teams/:id` | admin | Delete team |
+| GET | `/roster/team/:teamId` | user | Monthly roster for a team |
+| GET | `/roster/stats` | user | Shift totals per team (dashboard) |
+| POST | `/roster` | user | Create single entry |
+| PUT | `/roster/:id` | user | Update single entry |
+| DELETE | `/roster/:id` | user | Delete single entry |
+| DELETE | `/roster/employee/:id` | user | Remove employee from a month |
+| POST | `/roster/bulk` | user | Assign shift to multiple dates |
+| POST | `/roster/copy` | user | Copy month roster |
+| POST | `/roster/bulk-import` | admin | CSV mass import |
+| GET | `/users` | admin | List user accounts |
+| POST | `/users` | admin | Create user account |
+| PUT | `/users/:id` | admin | Update user account |
+| DELETE | `/users/:id` | admin | Delete user account |
+| POST | `/users/bulk-import` | admin | CSV bulk import users |
 
 ---
 
@@ -164,29 +254,13 @@ name, emp_code, job_title, email, phone
 ```
 name, username, password, role, team_name
 ```
-`role` must be `admin` or `member`. `team_name` must match an existing team exactly.
+
+`role` must be `admin` or `member`. `team_name` must match an existing team exactly. Passwords must be at least 8 characters.
 
 ### Roster (grid format)
 
 ```
 name, emp_code, team_name, month, 1, 2, 3, ... 31
 ```
+
 One row per employee. Columns `1`–`31` hold shift codes for each day of the month. `month` format: `YYYY-MM`. Empty cells are skipped.
-
----
-
-## Production Build
-
-```bash
-# Build backend
-cd backend && npm run build
-
-# Build frontend
-cd frontend && npm run build
-# Static files output to frontend/dist/
-
-# Run backend
-cd backend && npm start
-```
-
-Serve `frontend/dist/` with any static file server (nginx, Caddy, etc.) and proxy `/api/*` to the backend.

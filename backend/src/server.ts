@@ -3,6 +3,7 @@ import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import dotenv from 'dotenv';
+import path from 'path';
 import authRoutes from './routes/auth';
 import teamRoutes from './routes/teams';
 import rosterRoutes from './routes/roster';
@@ -13,11 +14,12 @@ dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 3001;
+const FRONTEND_DIST = path.join(__dirname, '../../frontend/dist');
 
 // Security headers
 app.use(helmet());
 
-// CORS — restrict to configured origin; defaults to localhost dev server
+// CORS — only needed when frontend is on a different origin (separate dev server)
 const allowedOrigin = process.env.CORS_ORIGIN || 'http://localhost:5173';
 app.use(cors({ origin: allowedOrigin, credentials: true }));
 
@@ -40,6 +42,12 @@ app.use('/api/teams', teamRoutes);
 app.use('/api/roster', rosterRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/employees', employeeRoutes);
+
+// Serve built frontend — SPA fallback sends all non-API routes to index.html
+app.use(express.static(FRONTEND_DIST));
+app.get('*', (_req, res) => {
+  res.sendFile(path.join(FRONTEND_DIST, 'index.html'));
+});
 
 app.listen(PORT, () => {
   console.log(`Roster backend running on http://localhost:${PORT}`);

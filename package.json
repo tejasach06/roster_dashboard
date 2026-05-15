@@ -3,7 +3,13 @@
   "version": "1.0.0",
   "scripts": {
     "dev": "concurrently --names \"backend,frontend\" --prefix-colors \"blue,green\" \"npm run dev --prefix backend\" \"npm run dev --prefix frontend\"",
-    "install:all": "npm install --prefix backend && npm install --prefix frontend"
+    "install:all": "npm install --prefix backend && npm install --prefix frontend",
+    "build": "npm run build --prefix backend && npm run build --prefix frontend",
+    "start": "pm2 start ecosystem.config.js --env production",
+    "stop": "pm2 stop roster-backend",
+    "restart": "pm2 restart roster-backend",
+    "logs": "pm2 logs roster-backend",
+    "status": "pm2 status"
   },
   "devDependencies": {
     "concurrently": "^8.2.2"
