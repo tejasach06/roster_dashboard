@@ -5,6 +5,7 @@ import { authenticate, requireAdmin, AuthRequest, canAccessTeam } from '../middl
 const router = Router();
 
 const VALID_CODES = ['MS', 'GS', 'AS', 'NS', 'WO', 'EL'];
+const MONTH_RE = /^\d{4}-(0[1-9]|1[0-2])$/;
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 function daysInMonth(year: number, month: number) {
@@ -12,6 +13,9 @@ function daysInMonth(year: number, month: number) {
 }
 function currentMonth() {
   return new Date().toISOString().slice(0, 7);
+}
+function validMonth(m: unknown): m is string {
+  return typeof m === 'string' && MONTH_RE.test(m);
 }
 function monthBounds(month: string) {
   const [y, m] = month.split('-').map(Number);
@@ -30,7 +34,9 @@ const ENTRY_JOIN = `
 // Shift-code totals per team for the dashboard
 router.get('/stats', authenticate, (req: AuthRequest, res) => {
   const user = req.user!;
-  const { start, end } = monthBounds((req.query.month as string) || currentMonth());
+  const monthParam = (req.query.month as string) || currentMonth();
+  if (!validMonth(monthParam)) return res.status(400).json({ error: 'month must be YYYY-MM' });
+  const { start, end } = monthBounds(monthParam);
 
   const where = user.role === 'admin' ? '' : 'AND t.id = ?';
   const params: any[] = [start, end];
@@ -53,7 +59,9 @@ router.get('/team/:teamId', authenticate, (req: AuthRequest, res) => {
   const teamId = Number(req.params.teamId);
   if (!canAccessTeam(req.user, teamId)) return res.status(403).json({ error: 'Access denied' });
 
-  const { start, end } = monthBounds((req.query.month as string) || currentMonth());
+  const monthParam = (req.query.month as string) || currentMonth();
+  if (!validMonth(monthParam)) return res.status(400).json({ error: 'month must be YYYY-MM' });
+  const { start, end } = monthBounds(monthParam);
 
   const entries = db.prepare(
     `${ENTRY_JOIN} WHERE re.team_id = ? AND re.date >= ? AND re.date <= ? ORDER BY e.name, re.date`
@@ -81,7 +89,7 @@ router.post('/', authenticate, (req: AuthRequest, res) => {
     res.json(entry);
   } catch (e: any) {
     if (e.message?.includes('UNIQUE')) return res.status(409).json({ error: 'Entry already exists for this date' });
-    res.status(500).json({ error: 'Server error' });
+    res.status(500).json({ error: 'Failed to create roster entry' });
   }
 });
 
@@ -110,6 +118,7 @@ router.delete('/employee/:employeeId', authenticate, (req: AuthRequest, res) => 
   const month      = req.query.month as string;
 
   if (!teamId || !month) return res.status(400).json({ error: 'team_id and month are required' });
+  if (!validMonth(month)) return res.status(400).json({ error: 'month must be YYYY-MM' });
   if (!canAccessTeam(req.user, teamId)) return res.status(403).json({ error: 'Access denied' });
 
   const { start, end } = monthBounds(month);
@@ -213,7 +222,7 @@ router.post('/bulk-import', authenticate, requireAdmin, (req: AuthRequest, res) 
     if (!emp)  { errors.push(`Employee not found: emp_code "${emp_code}"`); continue; }
     if (!team) { errors.push(`Team not found: "${team_name}"`); continue; }
     try { stmt.run(emp.id, team.id, shift_code, date); imported++; }
-    catch (e: any) { errors.push(`Row failed (${emp_code} ${date}): ${e.message}`); }
+    catch { errors.push(`Failed to import row (${emp_code} ${date})`); }
   }
   res.json({ imported, errors: errors.slice(0, 30) });
 });
