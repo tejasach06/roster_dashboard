@@ -1,0 +1,23 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm install *)",
+      "Bash(which node *)",
+      "Read(//usr/local/bin/**)",
+      "Read(//usr/bin/**)",
+      "Read(//home/tejas_acharya/.nvm/**)",
+      "Bash(command -v node)",
+      "Read(//usr/lib/**)",
+      "Read(//home/tejas_acharya/**)",
+      "Bash(find /home/tejas_acharya -name \"node\" -type f 2>/dev/null | head -5; find /opt -name \"node\" -type f 2>/dev/null | head -5; find /usr/local -name \"npm\" 2>/dev/null | head -5)",
+      "Read(//opt/**)",
+      "Read(//usr/local/**)",
+      "Bash(curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh)",
+      "Bash(bash)",
+      "Bash(pkill -f \"tsx src/server\")",
+      "Bash(pkill -f \"vite\")",
+      "Bash(export PATH=\"$HOME/.cargo/bin:$HOME/.local/bin:$PATH\")",
+      "Bash(uv tool *)"
+    ]
+  }
+}
