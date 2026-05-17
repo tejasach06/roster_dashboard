@@ -20,10 +20,19 @@ const FRONTEND_DIST = path.join(__dirname, '../../frontend/dist');
 app.use(helmet());
 
 // CORS — only needed when frontend is on a different origin (separate dev server)
-const allowedOrigin = process.env.CORS_ORIGIN || 'http://localhost:5173';
-app.use(cors({ origin: allowedOrigin, credentials: true }));
+const corsOrigin = process.env.CORS_ORIGIN;
+const allowedOrigins = (corsOrigin || 'http://localhost:5173')
+  .split(',')
+  .map((origin) => origin.trim())
+  .filter(Boolean);
 
-app.use(express.json());
+if (process.env.NODE_ENV === 'production' && !corsOrigin?.trim()) {
+  throw new Error('CORS_ORIGIN must list allowed frontend origins in production');
+}
+
+app.use(cors({ origin: allowedOrigins, credentials: true }));
+
+app.use(express.json({ limit: '1mb' }));
 
 // Strict rate limit on login to slow brute-force attempts (10 req / 15 min per IP)
 app.use(

@@ -66,13 +66,39 @@ db.exec(`
   );
 `);
 
+const isProduction = process.env.NODE_ENV === 'production';
+const MIN_BOOTSTRAP_PASSWORD_LEN = 12;
+
 // Seed default admin
 const adminExists = db.prepare("SELECT id FROM users WHERE username = 'admin'").get();
-if (!adminExists) {
+if (!adminExists && !isProduction) {
   const hash = bcrypt.hashSync('admin123', 10);
   db.prepare(
     "INSERT INTO users (name, username, password_hash, role) VALUES (?, ?, ?, 'admin')"
   ).run('Admin', 'admin', hash);
+}
+
+const totalAdmins = (db.prepare("SELECT COUNT(*) as c FROM users WHERE role = 'admin'").get() as any).c;
+if (isProduction && totalAdmins === 0) {
+  const username = process.env.ADMIN_USERNAME?.trim();
+  const password = process.env.ADMIN_PASSWORD;
+  const name = process.env.ADMIN_NAME?.trim() || 'Admin';
+
+  if (!username || !password || password.length < MIN_BOOTSTRAP_PASSWORD_LEN) {
+    throw new Error(
+      `No admin account exists. Set ADMIN_USERNAME and ADMIN_PASSWORD (${MIN_BOOTSTRAP_PASSWORD_LEN}+ chars) to bootstrap production.`
+    );
+  }
+
+  const hash = bcrypt.hashSync(password, 12);
+  db.prepare(
+    "INSERT INTO users (name, username, password_hash, role) VALUES (?, ?, ?, 'admin')"
+  ).run(name, username, hash);
+}
+
+const defaultAdmin = db.prepare("SELECT password_hash FROM users WHERE username = 'admin'").get() as any;
+if (isProduction && defaultAdmin && bcrypt.compareSync('admin123', defaultAdmin.password_hash)) {
+  throw new Error('Default admin password detected. Change or remove the admin/admin123 account before production startup.');
 }
 
 export default db;

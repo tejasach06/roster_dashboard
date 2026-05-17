@@ -2,13 +2,15 @@ import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 
 const rawSecret = process.env.JWT_SECRET;
-if (!rawSecret) {
+const insecureDevSecret = 'roster-secret-key-change-in-prod';
+
+if (!rawSecret || rawSecret === insecureDevSecret || rawSecret.length < 32) {
   if (process.env.NODE_ENV === 'production') {
-    throw new Error('JWT_SECRET environment variable must be set in production');
+    throw new Error('JWT_SECRET must be set to a unique value with at least 32 characters in production');
   }
   console.warn('[security] JWT_SECRET not set — using insecure default. Set JWT_SECRET in .env before deploying.');
 }
-export const JWT_SECRET = rawSecret || 'roster-secret-key-change-in-prod';
+export const JWT_SECRET = rawSecret || insecureDevSecret;
 
 export interface AuthRequest extends Request {
   user?: { id: number; name: string; username: string; role: string; team_id: number | null };

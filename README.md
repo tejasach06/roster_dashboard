@@ -67,6 +67,17 @@ CORS_ORIGIN=http://localhost:5173
 ```
 
 `JWT_SECRET` is **required** in production and will throw on startup if missing.
+It must be unique and at least 32 characters.
+
+If a production database has no admin user yet, bootstrap one on first startup:
+
+```env
+ADMIN_USERNAME=admin
+ADMIN_PASSWORD=replace-with-a-strong-one-time-password
+ADMIN_NAME=Admin
+```
+
+Remove those bootstrap variables after the first successful startup. The app refuses to start in production if the seeded `admin/admin123` development credential still exists.
 
 ### Run in development
 
@@ -88,7 +99,7 @@ Starts both servers concurrently (hot-reload on both):
 | Username | `admin` |
 | Password | `admin123` |
 
-> Change the admin password after first login via Admin Panel → Users. Passwords must be at least 8 characters.
+> Development only. Production startup refuses the default `admin/admin123` credential. Passwords must be at least 8 characters for normal user changes and at least 12 characters for production bootstrap.
 
 ---
 

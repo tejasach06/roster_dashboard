@@ -4,7 +4,24 @@ import { authenticate, requireAdmin, AuthRequest } from '../middleware/auth';
 
 const router = Router();
 
-router.get('/', authenticate, (_req, res) => {
+router.get('/', authenticate, (req: AuthRequest, res) => {
+  const user = req.user!;
+
+  if (user.role !== 'admin') {
+    if (!user.team_id) return res.json([]);
+
+    const employees = db
+      .prepare(`
+        SELECT e.*, t.name AS team_name
+        FROM employees e
+        LEFT JOIN teams t ON e.team_id = t.id
+        WHERE e.team_id = ?
+        ORDER BY e.name
+      `)
+      .all(user.team_id);
+    return res.json(employees);
+  }
+
   const employees = db
     .prepare(`
       SELECT e.*, t.name AS team_name

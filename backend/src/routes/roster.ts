@@ -17,10 +17,19 @@ function currentMonth() {
 function validMonth(m: unknown): m is string {
   return typeof m === 'string' && MONTH_RE.test(m);
 }
+function validDate(d: unknown): d is string {
+  if (typeof d !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(d)) return false;
+  const parsed = new Date(`${d}T00:00:00.000Z`);
+  return !Number.isNaN(parsed.getTime()) && parsed.toISOString().slice(0, 10) === d;
+}
 function monthBounds(month: string) {
   const [y, m] = month.split('-').map(Number);
   const last = daysInMonth(y, m);
   return { start: `${month}-01`, end: `${month}-${String(last).padStart(2, '0')}`, last };
+}
+function employeeBelongsToTeam(employeeId: unknown, teamId: number): boolean {
+  const employee = db.prepare('SELECT team_id FROM employees WHERE id = ?').get(Number(employeeId)) as any;
+  return employee?.team_id === teamId;
 }
 
 const ENTRY_JOIN = `
@@ -76,10 +85,13 @@ router.post('/', authenticate, (req: AuthRequest, res) => {
   const team_id = user.role === 'admin' ? req.body.team_id : user.team_id;
 
   if (!employee_id) return res.status(400).json({ error: 'employee_id is required' });
-  if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) return res.status(400).json({ error: 'date must be YYYY-MM-DD' });
+  if (!validDate(date)) return res.status(400).json({ error: 'date must be YYYY-MM-DD' });
   if (!shift_code || !VALID_CODES.includes(shift_code)) return res.status(400).json({ error: 'Invalid shift_code' });
   if (!team_id) return res.status(400).json({ error: 'team_id is required' });
   if (!canAccessTeam(user, Number(team_id))) return res.status(403).json({ error: 'Access denied' });
+  if (!employeeBelongsToTeam(employee_id, Number(team_id))) {
+    return res.status(400).json({ error: 'Employee must belong to the selected team' });
+  }
 
   try {
     const result = db.prepare(
@@ -148,6 +160,9 @@ router.post('/bulk', authenticate, (req: AuthRequest, res) => {
     return res.status(400).json({ error: 'employee_id, shift_code, and dates[] are required' });
   if (!VALID_CODES.includes(shift_code)) return res.status(400).json({ error: 'Invalid shift_code' });
   if (!canAccessTeam(user, Number(team_id))) return res.status(403).json({ error: 'Access denied' });
+  if (!employeeBelongsToTeam(employee_id, Number(team_id))) {
+    return res.status(400).json({ error: 'Employee must belong to the selected team' });
+  }
 
   const stmt = db.prepare(
     `INSERT INTO roster_entries (employee_id, team_id, shift_code, date, notes)
@@ -156,7 +171,7 @@ router.post('/bulk', authenticate, (req: AuthRequest, res) => {
   );
   let count = 0;
   for (const date of dates) {
-    if (/^\d{4}-\d{2}-\d{2}$/.test(date)) { stmt.run(employee_id, team_id, shift_code, date); count++; }
+    if (validDate(date)) { stmt.run(employee_id, team_id, shift_code, date); count++; }
   }
   res.json({ updated: count });
 });
@@ -166,6 +181,7 @@ router.post('/copy', authenticate, (req: AuthRequest, res) => {
   const user = req.user!;
   const { team_id, from_month, to_month } = req.body;
   if (!team_id || !from_month || !to_month) return res.status(400).json({ error: 'team_id, from_month, to_month required' });
+  if (!validMonth(from_month) || !validMonth(to_month)) return res.status(400).json({ error: 'from_month and to_month must be YYYY-MM' });
   if (!canAccessTeam(user, Number(team_id))) return res.status(403).json({ error: 'Access denied' });
 
   const { start: fStart, end: fEnd } = monthBounds(from_month);
@@ -214,7 +230,7 @@ router.post('/bulk-import', authenticate, requireAdmin, (req: AuthRequest, res) 
     if (!VALID_CODES.includes(shift_code)) {
       errors.push(`Invalid shift_code "${shift_code}" (${emp_code} ${date})`); continue;
     }
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+    if (!validDate(date)) {
       errors.push(`Invalid date "${date}" for ${emp_code}`); continue;
     }
     const emp  = db.prepare('SELECT id FROM employees WHERE emp_code = ?').get(emp_code) as any;
