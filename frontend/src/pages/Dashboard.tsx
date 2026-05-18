@@ -107,7 +107,7 @@ export default function Dashboard() {
         <div className="bg-white dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-slate-700 py-16 text-center">
           <Users size={40} className="text-gray-200 dark:text-slate-700 mx-auto mb-3" />
           <p className="text-gray-400 dark:text-slate-500 text-sm">No roster data for {fmtMonth(month)}</p>
-          {isAdmin && <p className="text-gray-300 dark:text-slate-600 text-xs mt-1">Go to a team roster and add members, or create teams in Admin Panel.</p>}
+          {isAdmin && <p className="text-gray-300 dark:text-slate-600 text-xs mt-1">Go to a team roster and add members, or create teams in Settings.</p>}
         </div>
       ) : (
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">

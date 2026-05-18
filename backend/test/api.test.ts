@@ -48,11 +48,47 @@ afterAll(() => {
 
 beforeEach(() => {
   db.exec(`
+    DELETE FROM app_settings;
     DELETE FROM roster_entries;
     DELETE FROM employees;
     DELETE FROM teams;
     DELETE FROM users WHERE username <> 'admin';
   `);
+});
+
+describe('settings', () => {
+  it('lets admins update public theme settings', async () => {
+    const logo = {
+      dataUrl: 'data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%2F%3E',
+      fileName: 'logo.svg',
+      mimeType: 'image/svg+xml',
+    };
+
+    await request(app).get('/api/settings/public').expect(200, { loginLogo: null, accentColor: '#4f46e5' });
+    await request(app).put('/api/settings/login-logo').send({ loginLogo: logo }).expect(401);
+
+    await request(app)
+      .put('/api/settings/login-logo')
+      .set(auth())
+      .send({ loginLogo: logo })
+      .expect(200);
+
+    await request(app)
+      .put('/api/settings/accent-color')
+      .set(auth())
+      .send({ accentColor: '#0f766e' })
+      .expect(200, { accentColor: '#0f766e' });
+
+    const publicSettings = await request(app).get('/api/settings/public').expect(200);
+    expect(publicSettings.body.loginLogo).toEqual(logo);
+    expect(publicSettings.body.accentColor).toBe('#0f766e');
+
+    await request(app)
+      .put('/api/settings/login-logo')
+      .set(auth())
+      .send({ loginLogo: null })
+      .expect(200, { loginLogo: null });
+  });
 });
 
 describe('auth', () => {

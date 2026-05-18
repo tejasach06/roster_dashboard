@@ -3,7 +3,49 @@
 @tailwind utilities;
 
 @layer base {
+  :root {
+    --accent-color: #4f46e5;
+  }
+
   body {
     @apply bg-gray-50 text-gray-900 antialiased;
+  }
+}
+
+@layer components {
+  .accent-bg {
+    background-color: var(--accent-color);
+  }
+
+  .accent-bg-hover:hover {
+    background-color: color-mix(in srgb, var(--accent-color) 88%, black);
+  }
+
+  .accent-text {
+    color: var(--accent-color);
+  }
+
+  .accent-border {
+    border-color: var(--accent-color);
+  }
+
+  .accent-soft {
+    background-color: color-mix(in srgb, var(--accent-color) 12%, white);
+    color: color-mix(in srgb, var(--accent-color) 82%, black);
+    border-color: color-mix(in srgb, var(--accent-color) 28%, white);
+  }
+
+  .dark .accent-soft {
+    background-color: color-mix(in srgb, var(--accent-color) 24%, transparent);
+    color: color-mix(in srgb, var(--accent-color) 55%, white);
+    border-color: color-mix(in srgb, var(--accent-color) 50%, transparent);
+  }
+
+  .accent-ring:focus {
+    --tw-ring-color: var(--accent-color);
+  }
+
+  .accent-spinner {
+    border-bottom-color: var(--accent-color);
   }
 }

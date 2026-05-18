@@ -1,44 +1,95 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { Plus, Pencil, Trash2, Users, Building2, ShieldCheck, UserSquare2, Mail, Phone, ListChecks, X } from 'lucide-react';
+import { Plus, Pencil, Trash2, Users, Building2, ShieldCheck, UserSquare2, Mail, Phone, ListChecks, X, Palette, Upload } from 'lucide-react';
 import api from '../api/client';
 import Modal from '../components/Modal';
+import { BulkImportSettings, ThemeSettings } from './Settings';
 
 interface Team     { id: number; name: string; description: string; member_count: number; }
 interface AppUser  { id: number; name: string; username: string; role: string; team_id: number | null; team_name?: string; }
 interface Employee { id: number; name: string; emp_code: string; job_title: string; email: string; phone: string; team_id: number | null; team_name?: string; }
 
 export default function AdminPanel() {
-  const [tab, setTab] = useState<'teams' | 'users' | 'employees'>('employees');
+  const [section, setSection] = useState<'employees' | 'teams' | 'users' | 'themes' | 'imports'>('employees');
 
   return (
     <div className="p-4 sm:p-8">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-slate-100">Admin Panel</h1>
-        <p className="text-gray-400 dark:text-slate-500 text-sm mt-1">Manage employees, teams, and user accounts</p>
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-slate-100">Settings</h1>
+        <p className="text-gray-400 dark:text-slate-500 text-sm mt-1">Manage the roster directory, user access, themes, and imports.</p>
       </div>
 
-      <div className="flex gap-1.5 mb-6 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl p-1 w-full sm:w-fit">
-        <TabBtn active={tab === 'employees'} onClick={() => setTab('employees')} icon={<UserSquare2 size={15} />} label="Employees" />
-        <TabBtn active={tab === 'teams'}     onClick={() => setTab('teams')}     icon={<Building2 size={15} />}    label="Teams" />
-        <TabBtn active={tab === 'users'}     onClick={() => setTab('users')}     icon={<Users size={15} />}        label="Users" />
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-3 mb-6">
+        <AdminTile
+          active={section === 'employees'}
+          onClick={() => setSection('employees')}
+          icon={<UserSquare2 size={20} />}
+          title="Employees"
+          description="Directory and bulk edits"
+        />
+        <AdminTile
+          active={section === 'teams'}
+          onClick={() => setSection('teams')}
+          icon={<Building2 size={20} />}
+          title="Teams"
+          description="Groups and roster ownership"
+        />
+        <AdminTile
+          active={section === 'users'}
+          onClick={() => setSection('users')}
+          icon={<Users size={20} />}
+          title="Users"
+          description="Accounts and permissions"
+        />
+        <AdminTile
+          active={section === 'themes'}
+          onClick={() => setSection('themes')}
+          icon={<Palette size={20} />}
+          title="Themes"
+          description="Logo and accent color"
+        />
+        <AdminTile
+          active={section === 'imports'}
+          onClick={() => setSection('imports')}
+          icon={<Upload size={20} />}
+          title="Bulk Imports"
+          description="CSV templates and uploads"
+        />
       </div>
 
-      {tab === 'employees' && <EmployeesTab />}
-      {tab === 'teams'     && <TeamsTab />}
-      {tab === 'users'     && <UsersTab />}
+      {section === 'employees' && <EmployeesTab />}
+      {section === 'teams'     && <TeamsTab />}
+      {section === 'users'     && <UsersTab />}
+      {section === 'themes'    && <ThemeSettings />}
+      {section === 'imports'   && <BulkImportSettings />}
     </div>
   );
 }
 
-function TabBtn({ active, onClick, icon, label }: { active: boolean; onClick: () => void; icon: React.ReactNode; label: string }) {
+function AdminTile({
+  active, onClick, icon, title, description,
+}: {
+  active: boolean;
+  onClick: () => void;
+  icon: React.ReactNode;
+  title: string;
+  description: string;
+}) {
   return (
     <button
       onClick={onClick}
-      className={`flex flex-1 sm:flex-none items-center justify-center gap-2 px-3 sm:px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-        active ? 'bg-indigo-600 text-white' : 'text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200'
+      className={`text-left rounded-xl border p-4 transition-colors ${
+        active
+          ? 'accent-bg accent-border text-white shadow-sm'
+          : 'bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-700 text-gray-700 dark:text-slate-200 hover:bg-gray-50 dark:hover:bg-slate-700/60'
       }`}
     >
-      {icon} {label}
+      <span className={`inline-flex h-10 w-10 items-center justify-center rounded-lg mb-3 ${
+        active ? 'bg-white/20 text-white' : 'accent-soft'
+      }`}>
+        {icon}
+      </span>
+      <span className="block text-sm font-semibold">{title}</span>
+      <span className={`block text-xs mt-1 ${active ? 'text-indigo-100' : 'text-gray-400 dark:text-slate-500'}`}>{description}</span>
     </button>
   );
 }

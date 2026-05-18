@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, Users, Settings, LogOut, ClipboardList, SlidersHorizontal, Moon, Sun, Menu, X } from 'lucide-react';
+import { LayoutDashboard, Users, Settings, LogOut, ClipboardList, Moon, Sun, Menu, X } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
 
@@ -16,14 +16,14 @@ interface SidebarProps {
 function SidebarContent({ onNavClick, user, isAdmin, isDark, toggleTheme, onLogout }: SidebarProps) {
   const navClass = ({ isActive }: { isActive: boolean }) =>
     `flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors ${
-      isActive ? 'bg-indigo-600 text-white' : 'text-slate-300 hover:bg-slate-700 hover:text-white'
+      isActive ? 'accent-bg text-white' : 'text-slate-300 hover:bg-slate-700 hover:text-white'
     }`;
 
   return (
     <>
       <div className="px-6 py-5 border-b border-slate-700">
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center">
+          <div className="w-8 h-8 accent-bg rounded-lg flex items-center justify-center">
             <ClipboardList size={16} className="text-white" />
           </div>
           <span className="text-white font-bold text-lg tracking-tight">Roster Manager</span>
@@ -42,21 +42,15 @@ function SidebarContent({ onNavClick, user, isAdmin, isDark, toggleTheme, onLogo
         )}
 
         {isAdmin && (
-          <NavLink to="/admin" className={navClass} onClick={onNavClick}>
-            <Settings size={18} /> Admin Panel
-          </NavLink>
-        )}
-
-        {isAdmin && (
           <NavLink to="/settings" className={navClass} onClick={onNavClick}>
-            <SlidersHorizontal size={18} /> Settings
+            <Settings size={18} /> Settings
           </NavLink>
         )}
       </nav>
 
       <div className="px-4 py-4 border-t border-slate-700 space-y-3">
         <div className="flex items-center gap-3 px-1">
-          <div className="w-8 h-8 bg-indigo-500 rounded-full flex items-center justify-center text-white text-sm font-semibold shrink-0">
+          <div className="w-8 h-8 accent-bg rounded-full flex items-center justify-center text-white text-sm font-semibold shrink-0">
             {user?.name?.[0]?.toUpperCase()}
           </div>
           <div className="overflow-hidden flex-1">
@@ -142,7 +136,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             <Menu size={22} />
           </button>
           <div className="flex items-center gap-2.5 flex-1">
-            <div className="w-7 h-7 bg-indigo-600 rounded-lg flex items-center justify-center">
+            <div className="w-7 h-7 accent-bg rounded-lg flex items-center justify-center">
               <ClipboardList size={14} className="text-white" />
             </div>
             <span className="text-white font-bold text-base tracking-tight">Roster Manager</span>
