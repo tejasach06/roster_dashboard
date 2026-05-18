@@ -1,18 +1,7 @@
 import React, { useState } from 'react';
 import { Download, Upload, CheckCircle, AlertCircle, FileText } from 'lucide-react';
 import api from '../api/client';
-
-function parseCSV(text: string): Record<string, string>[] {
-  const lines = text.trim().split('\n').filter((l) => l.trim());
-  if (lines.length < 2) return [];
-  const headers = lines[0].split(',').map((h) => h.trim().replace(/^"|"$/g, '').toLowerCase());
-  return lines.slice(1).map((line) => {
-    const vals = line.split(',').map((v) => v.trim().replace(/^"|"$/g, ''));
-    const obj: Record<string, string> = {};
-    headers.forEach((h, i) => { obj[h] = vals[i] ?? ''; });
-    return obj;
-  });
-}
+import { parseCSV } from '../utils/csv';
 
 function downloadCSV(rows: string[][], filename: string) {
   const content = rows.map((r) => r.join(',')).join('\n');
@@ -177,15 +166,15 @@ export default function Settings() {
       <div className="space-y-5">
         <ImportCard
           title="Import Employees"
-          description="Add multiple employees at once. Existing employees (matched by name) are skipped."
+          description="Add multiple employees at once. Existing employees are skipped by emp_code when present, otherwise by name."
           endpoint="/employees/bulk-import"
           templateFile="employees_template.csv"
           templateRows={[
-            ['name', 'emp_code', 'job_title', 'email', 'phone'],
-            ['Alice Johnson', 'STPL1001', 'Support Engineer', 'alice@example.com', '9876543210'],
-            ['Bob Smith',     'STPL1002', 'Senior Engineer',  'bob@example.com',   ''],
+            ['name', 'emp_code', 'job_title', 'email', 'phone', 'team_name'],
+            ['Alice Johnson', 'STPL1001', 'Support Engineer', 'alice@example.com', '9876543210', 'Support Alpha'],
+            ['Bob Smith',     'STPL1002', 'Senior Engineer',  'bob@example.com',   '',           'Support Alpha'],
           ]}
-          columns={['Name', 'Emp_Code', 'Job_Title', 'Email', 'Phone']}
+          columns={['Name', 'Emp_Code', 'Job_Title', 'Email', 'Phone', 'Team_Name']}
           parseRows={(rows) => rows.filter((r) => r.name?.trim())}
         />
 

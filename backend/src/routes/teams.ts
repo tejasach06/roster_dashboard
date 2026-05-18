@@ -9,9 +9,9 @@ router.get('/', authenticate, (req: AuthRequest, res) => {
   if (user.role === 'admin') {
     const teams = db
       .prepare(
-        `SELECT t.*, COUNT(re.id) as member_count
+        `SELECT t.*, COUNT(e.id) as member_count
          FROM teams t
-         LEFT JOIN roster_entries re ON re.team_id = t.id
+         LEFT JOIN employees e ON e.team_id = t.id
          GROUP BY t.id
          ORDER BY t.name`
       )
@@ -23,9 +23,9 @@ router.get('/', authenticate, (req: AuthRequest, res) => {
 
   const team = db
     .prepare(
-      `SELECT t.*, COUNT(re.id) as member_count
+      `SELECT t.*, COUNT(e.id) as member_count
        FROM teams t
-       LEFT JOIN roster_entries re ON re.team_id = t.id
+       LEFT JOIN employees e ON e.team_id = t.id
        WHERE t.id = ?
        GROUP BY t.id`
     )

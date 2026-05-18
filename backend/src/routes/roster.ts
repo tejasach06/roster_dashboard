@@ -159,6 +159,7 @@ router.post('/bulk', authenticate, (req: AuthRequest, res) => {
   if (!employee_id || !shift_code || !Array.isArray(dates) || dates.length === 0)
     return res.status(400).json({ error: 'employee_id, shift_code, and dates[] are required' });
   if (!VALID_CODES.includes(shift_code)) return res.status(400).json({ error: 'Invalid shift_code' });
+  if (!team_id) return res.status(400).json({ error: 'team_id is required' });
   if (!canAccessTeam(user, Number(team_id))) return res.status(403).json({ error: 'Access denied' });
   if (!employeeBelongsToTeam(employee_id, Number(team_id))) {
     return res.status(400).json({ error: 'Employee must belong to the selected team' });
@@ -167,7 +168,7 @@ router.post('/bulk', authenticate, (req: AuthRequest, res) => {
   const stmt = db.prepare(
     `INSERT INTO roster_entries (employee_id, team_id, shift_code, date, notes)
      VALUES (?, ?, ?, ?, '')
-     ON CONFLICT(employee_id, date) DO UPDATE SET shift_code = excluded.shift_code, updated_at = CURRENT_TIMESTAMP`
+     ON CONFLICT(employee_id, date) DO UPDATE SET team_id = excluded.team_id, shift_code = excluded.shift_code, updated_at = CURRENT_TIMESTAMP`
   );
   let count = 0;
   for (const date of dates) {
@@ -216,7 +217,7 @@ router.post('/bulk-import', authenticate, requireAdmin, (req: AuthRequest, res) 
   const stmt = db.prepare(
     `INSERT INTO roster_entries (employee_id, team_id, shift_code, date, notes)
      VALUES (?, ?, ?, ?, '')
-     ON CONFLICT(employee_id, date) DO UPDATE SET shift_code = excluded.shift_code, updated_at = CURRENT_TIMESTAMP`
+     ON CONFLICT(employee_id, date) DO UPDATE SET team_id = excluded.team_id, shift_code = excluded.shift_code, updated_at = CURRENT_TIMESTAMP`
   );
 
   let imported = 0;
@@ -233,10 +234,14 @@ router.post('/bulk-import', authenticate, requireAdmin, (req: AuthRequest, res) 
     if (!validDate(date)) {
       errors.push(`Invalid date "${date}" for ${emp_code}`); continue;
     }
-    const emp  = db.prepare('SELECT id FROM employees WHERE emp_code = ?').get(emp_code) as any;
+    const emp  = db.prepare('SELECT id, team_id FROM employees WHERE emp_code = ?').get(emp_code) as any;
     const team = db.prepare('SELECT id FROM teams WHERE name = ?').get(team_name) as any;
     if (!emp)  { errors.push(`Employee not found: emp_code "${emp_code}"`); continue; }
     if (!team) { errors.push(`Team not found: "${team_name}"`); continue; }
+    if (emp.team_id !== team.id) {
+      errors.push(`Employee "${emp_code}" is not assigned to team "${team_name}"`);
+      continue;
+    }
     try { stmt.run(emp.id, team.id, shift_code, date); imported++; }
     catch { errors.push(`Failed to import row (${emp_code} ${date})`); }
   }

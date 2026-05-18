@@ -58,16 +58,42 @@ router.post('/bulk-import', authenticate, requireAdmin, (req: AuthRequest, res) 
     return res.status(400).json({ error: 'rows array required' });
 
   const stmt = db.prepare(
-    `INSERT OR IGNORE INTO employees (name, emp_code, job_title, email, phone) VALUES (?, ?, ?, ?, ?)`
+    `INSERT INTO employees (name, emp_code, job_title, email, phone, team_id) VALUES (?, ?, ?, ?, ?, ?)`
   );
   let created = 0, skipped = 0;
+  const errors: string[] = [];
+
   for (const row of rows) {
-    const { name, emp_code = '', job_title = '', email = '', phone = '' } = row;
+    const { name, emp_code = '', job_title = '', email = '', phone = '', team_name = '' } = row;
     if (!name?.trim()) { skipped++; continue; }
-    const info = stmt.run(name.trim(), emp_code.trim(), job_title.trim(), email.trim(), phone.trim());
-    if (info.changes) created++; else skipped++;
+
+    let teamId = null;
+    if (team_name?.trim()) {
+      const team = db.prepare('SELECT id FROM teams WHERE name = ?').get(team_name.trim()) as any;
+      if (!team) {
+        errors.push(`Team not found: "${team_name}" (employee: ${name})`);
+        skipped++;
+        continue;
+      }
+      teamId = team.id;
+    }
+
+    const duplicate = emp_code?.trim()
+      ? db.prepare('SELECT id FROM employees WHERE lower(trim(emp_code)) = lower(?)').get(emp_code.trim()) as any
+      : db.prepare('SELECT id FROM employees WHERE lower(trim(name)) = lower(?)').get(name.trim()) as any;
+    if (duplicate) { skipped++; continue; }
+
+    stmt.run(
+      name.trim(),
+      emp_code.trim(),
+      job_title.trim(),
+      email.trim(),
+      phone.trim(),
+      teamId
+    );
+    created++;
   }
-  res.json({ created, skipped });
+  res.json({ created, skipped, errors: errors.slice(0, 20) });
 });
 
 // ── PUT /employees/bulk-edit ─────────────────────────────────────────────────
