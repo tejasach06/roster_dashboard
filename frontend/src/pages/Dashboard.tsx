@@ -66,7 +66,7 @@ export default function Dashboard() {
         <div className="text-center">
           <Users size={48} className="text-gray-200 dark:text-slate-700 mx-auto mb-3" />
           <p className="text-gray-500 dark:text-slate-400 font-medium">No team assigned</p>
-          <p className="text-gray-400 dark:text-slate-500 text-sm mt-1">Contact your admin to get assigned to a team.</p>
+          <p className="text-gray-500 dark:text-slate-400 text-sm mt-1">Contact your admin to get assigned to a team.</p>
         </div>
       </div>
     );
@@ -78,7 +78,7 @@ export default function Dashboard() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-slate-100">Welcome back, {user?.name}</h1>
-          <p className="text-gray-400 dark:text-slate-500 text-sm mt-0.5">Monthly roster coverage overview</p>
+          <p className="text-gray-500 dark:text-slate-400 text-sm mt-0.5">Monthly roster coverage overview</p>
         </div>
         <div className="flex items-center gap-2 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl px-3 py-2 shadow-sm">
           <button onClick={() => setMonth(prevMonth(month))} className="p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700 text-gray-500 dark:text-slate-400 transition-colors">
@@ -106,8 +106,8 @@ export default function Dashboard() {
       ) : teams.length === 0 ? (
         <div className="bg-white dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-slate-700 py-16 text-center">
           <Users size={40} className="text-gray-200 dark:text-slate-700 mx-auto mb-3" />
-          <p className="text-gray-400 dark:text-slate-500 text-sm">No roster data for {fmtMonth(month)}</p>
-          {isAdmin && <p className="text-gray-300 dark:text-slate-600 text-xs mt-1">Go to a team roster and add members, or create teams in Settings.</p>}
+          <p className="text-gray-500 dark:text-slate-400 text-sm">No roster data for {fmtMonth(month)}</p>
+          {isAdmin && <p className="text-gray-500 dark:text-slate-500 text-xs mt-1">Go to a team roster and add members, or create teams in Settings.</p>}
         </div>
       ) : (
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
@@ -131,7 +131,7 @@ function TeamCard({ team, onClick }: { team: TeamSummary; onClick: () => void })
           </div>
           <div>
             <h3 className="font-semibold text-gray-900 dark:text-slate-100 text-sm">{team.team_name}</h3>
-            <p className="text-xs text-gray-400 dark:text-slate-500">{team.total} day-shifts assigned this month</p>
+            <p className="text-xs text-gray-500 dark:text-slate-400">{team.total} day-shifts assigned this month</p>
           </div>
         </div>
         <button onClick={onClick} className="flex items-center gap-1.5 text-xs font-medium text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 bg-indigo-50 dark:bg-indigo-900/30 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 px-3 py-1.5 rounded-lg transition-colors">

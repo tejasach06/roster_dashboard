@@ -43,3 +43,10 @@ frontend/.vite/
 # ── Misc ──────────────────────────────────────────────────────────────────────
 graphify-out/
 *.xlsx
+
+AGENTS.md
+.codex
+.claude
+.agents
+.gitignore
+.graphify_python

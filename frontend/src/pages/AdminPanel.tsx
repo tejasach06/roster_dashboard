@@ -15,7 +15,7 @@ export default function AdminPanel() {
     <div className="p-4 sm:p-8">
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-gray-900 dark:text-slate-100">Settings</h1>
-        <p className="text-gray-400 dark:text-slate-500 text-sm mt-1">Manage the roster directory, user access, themes, and imports.</p>
+        <p className="text-gray-500 dark:text-slate-400 text-sm mt-1">Manage the roster directory, user access, themes, and imports.</p>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-3 mb-6">
@@ -89,7 +89,7 @@ function AdminTile({
         {icon}
       </span>
       <span className="block text-sm font-semibold">{title}</span>
-      <span className={`block text-xs mt-1 ${active ? 'text-indigo-100' : 'text-gray-400 dark:text-slate-500'}`}>{description}</span>
+      <span className={`block text-xs mt-1 ${active ? 'text-indigo-100' : 'text-gray-500 dark:text-slate-400'}`}>{description}</span>
     </button>
   );
 }
@@ -192,7 +192,7 @@ function EmployeesTab() {
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-slate-700">
           <div>
             <span className="text-sm font-medium text-gray-700 dark:text-slate-300">{employees.length} employee{employees.length !== 1 ? 's' : ''} in directory</span>
-            <p className="text-xs text-gray-400 dark:text-slate-500 mt-0.5">These are the people you can assign to monthly rosters</p>
+            <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5">These are the people you can assign to monthly rosters</p>
           </div>
           <button onClick={openAdd} className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium px-3 py-2 rounded-lg transition-colors">
             <Plus size={15} /> Add Employee
@@ -229,8 +229,8 @@ function EmployeesTab() {
         {employees.length === 0 ? (
           <div className="py-16 text-center">
             <UserSquare2 size={36} className="text-gray-200 dark:text-slate-700 mx-auto mb-3" />
-            <p className="text-gray-400 dark:text-slate-500 text-sm font-medium">No employees yet</p>
-            <p className="text-gray-300 dark:text-slate-600 text-xs mt-1">Add employees here, then assign them to team rosters by month.</p>
+            <p className="text-gray-500 dark:text-slate-400 text-sm font-medium">No employees yet</p>
+            <p className="text-gray-500 dark:text-slate-500 text-xs mt-1">Add employees here, then assign them to team rosters by month.</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -279,14 +279,14 @@ function EmployeesTab() {
                       <td className="px-4 py-3 hidden md:table-cell">
                         {emp.team_name
                           ? <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-xs font-medium bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 border border-indigo-100 dark:border-indigo-800"><Building2 size={10} />{emp.team_name}</span>
-                          : <span className="text-xs text-gray-300 dark:text-slate-600">—</span>
+                          : <span className="text-xs text-gray-500 dark:text-slate-500">—</span>
                         }
                       </td>
                       <td className="px-4 py-3 hidden lg:table-cell">
                         <div className="space-y-0.5">
                           {emp.email && <div className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-slate-400"><Mail size={11} /> {emp.email}</div>}
                           {emp.phone && <div className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-slate-400"><Phone size={11} /> {emp.phone}</div>}
-                          {!emp.email && !emp.phone && <span className="text-xs text-gray-300 dark:text-slate-600">—</span>}
+                          {!emp.email && !emp.phone && <span className="text-xs text-gray-500 dark:text-slate-500">—</span>}
                         </div>
                       </td>
                       <td className="px-4 py-3">
@@ -436,7 +436,7 @@ function TeamsTab() {
           </button>
         </div>
         {teams.length === 0 ? (
-          <div className="py-16 text-center text-gray-400 dark:text-slate-500 text-sm">No teams yet.</div>
+          <div className="py-16 text-center text-gray-500 dark:text-slate-400 text-sm">No teams yet.</div>
         ) : (
           <div className="overflow-x-auto">
           <table className="w-full">
@@ -545,14 +545,14 @@ function UsersTab() {
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-slate-700">
           <div>
             <span className="text-sm font-medium text-gray-700 dark:text-slate-300">{users.length} user{users.length !== 1 ? 's' : ''}</span>
-            <p className="text-xs text-gray-400 dark:text-slate-500 mt-0.5">Login accounts — assign to teams to restrict their view</p>
+            <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5">Login accounts — assign to teams to restrict their view</p>
           </div>
           <button onClick={openAdd} className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium px-3 py-2 rounded-lg transition-colors">
             <Plus size={15} /> Add User
           </button>
         </div>
         {users.length === 0 ? (
-          <div className="py-16 text-center text-gray-400 dark:text-slate-500 text-sm">No users yet.</div>
+          <div className="py-16 text-center text-gray-500 dark:text-slate-400 text-sm">No users yet.</div>
         ) : (
           <div className="overflow-x-auto">
           <table className="w-full">

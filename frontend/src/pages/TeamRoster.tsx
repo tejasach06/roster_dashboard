@@ -306,7 +306,7 @@ export default function TeamRoster() {
           </button>
           <div>
             <h1 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-slate-100">{team?.name || 'Team Roster'}</h1>
-            <p className="text-gray-400 dark:text-slate-500 text-xs mt-0.5">
+            <p className="text-gray-500 dark:text-slate-400 text-xs mt-0.5">
               {visibleRows.length !== rows.length
                 ? `${visibleRows.length} of ${rows.length} employees`
                 : `${rows.length} employee${rows.length !== 1 ? 's' : ''}`
@@ -395,7 +395,7 @@ export default function TeamRoster() {
 
         {/* Employee search */}
         <div className="relative">
-          <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 dark:text-slate-500" />
+          <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-500 dark:text-slate-400" />
           <input
             value={empSearch}
             onChange={(e) => setEmpSearch(e.target.value)}
@@ -411,7 +411,7 @@ export default function TeamRoster() {
 
         {/* Shift filter */}
         <div className="flex items-center gap-1">
-          <span className="text-xs text-gray-400 mr-0.5">Shift</span>
+          <span className="text-xs text-gray-500 dark:text-slate-400 mr-0.5">Shift</span>
           {(['all', ...SHIFT_CODE_KEYS] as (ShiftCode | 'all')[]).map((code) => (
             <button
               key={code}
@@ -485,8 +485,8 @@ export default function TeamRoster() {
       {rows.length === 0 ? (
         <div className="flex-1 flex items-center justify-center">
           <div className="text-center py-12">
-            <p className="text-gray-400 dark:text-slate-500 text-sm">No roster entries for {formatMonthLabel(month)}</p>
-            <p className="text-gray-300 dark:text-slate-600 text-xs mt-1">Click "Add Employee" to start building this month's roster.</p>
+            <p className="text-gray-500 dark:text-slate-400 text-sm">No roster entries for {formatMonthLabel(month)}</p>
+            <p className="text-gray-500 dark:text-slate-500 text-xs mt-1">Click "Add Employee" to start building this month's roster.</p>
           </div>
         </div>
       ) : (
@@ -494,7 +494,7 @@ export default function TeamRoster() {
           {visibleRows.length === 0 ? (
             <div className="flex items-center justify-center py-16">
               <div className="text-center">
-                <p className="text-gray-400 dark:text-slate-500 text-sm">No employees match the current filters</p>
+                <p className="text-gray-500 dark:text-slate-400 text-sm">No employees match the current filters</p>
                 <button onClick={clearFilters} className="mt-2 text-xs text-indigo-600 dark:text-indigo-400 hover:underline">Clear filters</button>
               </div>
             </div>
@@ -532,7 +532,7 @@ export default function TeamRoster() {
                       }`}
                     >
                       <div className="text-xs font-bold leading-tight">{h.num}</div>
-                      <div className="text-[9px] font-normal opacity-60">{h.dow}</div>
+                      <div className="text-[11px] font-normal opacity-60">{h.dow}</div>
                     </th>
                   ))}
                 </tr>
@@ -551,12 +551,12 @@ export default function TeamRoster() {
                       <div className="flex items-center gap-1">
                         <div className="min-w-0 flex-1">
                           <div className="font-medium text-sm text-gray-900 dark:text-slate-100 truncate" title={emp.name}>{emp.name}</div>
-                          {emp.job_title && <div className="text-[10px] text-gray-400 dark:text-slate-500 truncate">{emp.job_title}</div>}
+                          {emp.job_title && <div className="text-[11px] text-gray-500 dark:text-slate-400 truncate">{emp.job_title}</div>}
                         </div>
                         {editMode && (
                           <button
                             onClick={() => setRemoveTarget({ id: emp.id, name: emp.name, entryCount: Object.keys(days).length })}
-                            className="shrink-0 p-1 rounded text-gray-300 dark:text-slate-600 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors"
+                            className="shrink-0 p-1 rounded text-gray-500 dark:text-slate-500 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors"
                             title="Remove from this month's roster"
                           >
                             <Trash2 size={12} />
@@ -606,7 +606,7 @@ export default function TeamRoster() {
                             title={editMode ? (cfg ? `${cfg.label}${cfg.time ? ' · ' + cfg.time : ''}` : 'Click to assign') : cfg?.label}
                           >
                             {sc ?? (editMode
-                              ? <span className="opacity-0 group-hover:opacity-100 text-gray-300">+</span>
+                              ? <span className="opacity-0 group-hover:opacity-100 text-gray-400 dark:text-slate-500">+</span>
                               : null
                             )}
                           </button>
@@ -661,7 +661,7 @@ export default function TeamRoster() {
                             <td key={code} className="px-3 py-2 text-center">
                               {n > 0
                                 ? <span className={`inline-block min-w-[28px] px-1.5 py-0.5 rounded text-xs font-bold border ${cfg.color}`}>{n}</span>
-                                : <span className="text-gray-300 text-xs">0</span>
+                                : <span className="text-gray-400 dark:text-slate-500 text-xs">0</span>
                               }
                             </td>
                           );
@@ -795,7 +795,7 @@ export default function TeamRoster() {
                   <option key={code} value={code}>{SHIFT_CODES[code].label} ({code})</option>
                 ))}
               </select>
-              <p className="text-xs text-gray-400 mt-1.5">You can click individual cells to override after adding.</p>
+              <p className="text-xs text-gray-500 dark:text-slate-400 mt-1.5">You can click individual cells to override after adding.</p>
             </div>
             <div className="flex justify-end gap-3 pt-1">
               <button onClick={() => setShowAddModal(false)} className="px-4 py-2 text-sm text-gray-600 dark:text-slate-300 border border-gray-300 dark:border-slate-600 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-700">Cancel</button>
@@ -812,7 +812,7 @@ export default function TeamRoster() {
         <Modal title="Copy Previous Month's Roster" onClose={() => setShowCopyModal(false)} size="sm">
           <p className="text-gray-600 text-sm mb-5">
             Copy all entries from <strong>{formatMonthLabel(shiftMonth(month, -1))}</strong> into <strong>{formatMonthLabel(month)}</strong>?
-            <br /><span className="text-gray-400 text-xs mt-1 block">Existing entries for this month won't be overwritten.</span>
+            <br /><span className="text-gray-500 dark:text-slate-400 text-xs mt-1 block">Existing entries for this month won't be overwritten.</span>
           </p>
           <div className="flex justify-end gap-3">
             <button onClick={() => setShowCopyModal(false)} className="px-4 py-2 text-sm text-gray-600 dark:text-slate-300 border border-gray-300 dark:border-slate-600 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-700">Cancel</button>
@@ -829,7 +829,7 @@ export default function TeamRoster() {
           <p className="text-gray-600 dark:text-slate-300 text-sm mb-2">
             Remove <strong>{removeTarget.name}</strong> from the <strong>{formatMonthLabel(month)}</strong> roster?
           </p>
-          <p className="text-gray-400 dark:text-slate-500 text-xs mb-5">
+          <p className="text-gray-500 dark:text-slate-400 text-xs mb-5">
             {removeTarget.entryCount} shift {removeTarget.entryCount === 1 ? 'entry' : 'entries'} will be permanently deleted.
             This only affects this month — other months are not changed.
           </p>
@@ -853,7 +853,7 @@ export default function TeamRoster() {
         <Modal title="Plan Next Month's Roster" onClose={() => setShowCopyNextModal(false)} size="sm">
           <p className="text-gray-600 text-sm mb-5">
             Copy <strong>{formatMonthLabel(month)}</strong>'s roster into <strong>{formatMonthLabel(shiftMonth(month, 1))}</strong>?
-            <br /><span className="text-gray-400 text-xs mt-1 block">
+            <br /><span className="text-gray-500 dark:text-slate-400 text-xs mt-1 block">
               Existing entries for {formatMonthLabel(shiftMonth(month, 1))} won't be overwritten.
               You'll be taken there after copying to fine-tune.
             </span>
@@ -874,7 +874,7 @@ export default function TeamRoster() {
 function RosterStat({ label, value, color }: { label: string; value: number; color?: string }) {
   return (
     <div className={`flex flex-col items-center justify-center px-5 py-2.5 border-r border-gray-100 dark:border-slate-700 min-w-[64px] ${color ?? 'text-gray-700 dark:text-slate-300'}`}>
-      <div className="text-[10px] font-semibold uppercase tracking-wide opacity-60 mb-0.5">{label}</div>
+      <div className="text-[11px] font-semibold uppercase tracking-wide opacity-60 mb-0.5">{label}</div>
       <div className="text-xl font-bold">{value}</div>
     </div>
   );
@@ -942,7 +942,7 @@ function MiniCalendar({
       {/* Day-of-week header */}
       <div className="grid grid-cols-7 mb-1">
         {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map((d, i) => (
-          <div key={d} className={`text-center text-[10px] font-semibold py-0.5 ${i === 0 || i === 6 ? 'text-blue-400' : 'text-gray-400'}`}>
+          <div key={d} className={`text-center text-[11px] font-semibold py-0.5 ${i === 0 || i === 6 ? 'text-blue-400' : 'text-gray-400'}`}>
             {d}
           </div>
         ))}
@@ -985,7 +985,7 @@ function MiniCalendar({
       </div>
 
       {/* Status line */}
-      <div className="mt-2.5 pt-2 border-t border-gray-100 dark:border-slate-700 text-xs text-center text-gray-400 dark:text-slate-500">
+      <div className="mt-2.5 pt-2 border-t border-gray-100 dark:border-slate-700 text-xs text-center text-gray-500 dark:text-slate-400">
         {selecting !== null
           ? 'Click end date to complete range'
           : from === to ? `Day ${from} selected` : `Days ${from} – ${to} (${to - from + 1} days)`

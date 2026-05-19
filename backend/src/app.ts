@@ -47,7 +47,7 @@ app.use('/api/employees', employeeRoutes);
 app.use('/api/settings', settingsRoutes);
 
 app.use(express.static(FRONTEND_DIST));
-app.get('*', (_req, res) => {
+app.get('/{*splat}', (_req, res) => {
   res.sendFile(path.join(FRONTEND_DIST, 'index.html'));
 });
 

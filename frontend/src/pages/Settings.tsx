@@ -119,7 +119,7 @@ export function ThemeSettings() {
           <Palette size={16} className="accent-text" />
           Themes
         </div>
-        <p className="text-xs text-gray-400 dark:text-slate-500 mt-1">Set the login logo and accent color used across the app.</p>
+        <p className="text-xs text-gray-500 dark:text-slate-400 mt-1">Set the login logo and accent color used across the app.</p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_260px] gap-6 px-6 py-5">
@@ -160,14 +160,14 @@ export function ThemeSettings() {
 
           <div>
             <label className="block text-xs font-medium text-gray-600 dark:text-slate-400 mb-2">Login logo</label>
-          <label className="flex items-center gap-3 border-2 border-dashed border-gray-200 dark:border-slate-600 rounded-lg px-4 py-4 cursor-pointer hover:border-indigo-300 dark:hover:border-indigo-500 hover:bg-indigo-50/30 dark:hover:bg-indigo-900/10 transition-colors">
-            <ImageIcon size={20} className="text-gray-400 dark:text-slate-500 shrink-0" />
-            <span className="min-w-0">
-              <span className="block text-sm font-medium text-gray-700 dark:text-slate-200 truncate">{draftLogo?.fileName || 'Choose PNG or SVG logo'}</span>
-              <span className="block text-xs text-gray-400 dark:text-slate-500">Maximum 1 MB. Transparent logos work best.</span>
-            </span>
-            <input type="file" accept="image/png,image/svg+xml,.png,.svg" onChange={handleFile} className="hidden" />
-          </label>
+            <label className="flex items-center gap-3 border-2 border-dashed border-gray-200 dark:border-slate-600 rounded-lg px-4 py-4 cursor-pointer hover:border-indigo-300 dark:hover:border-indigo-500 hover:bg-indigo-50/30 dark:hover:bg-indigo-900/10 transition-colors">
+              <ImageIcon size={20} className="text-gray-500 dark:text-slate-400 shrink-0" />
+              <span className="min-w-0">
+                <span className="block text-sm font-medium text-gray-700 dark:text-slate-200 truncate">{draftLogo?.fileName || 'Choose PNG or SVG logo'}</span>
+                <span className="block text-xs text-gray-500 dark:text-slate-400">Maximum 1 MB. Transparent logos work best.</span>
+              </span>
+              <input type="file" accept="image/png,image/svg+xml,.png,.svg" onChange={handleFile} className="hidden" />
+            </label>
           </div>
 
           <div className="flex flex-wrap gap-3">
@@ -278,7 +278,7 @@ function ImportCard({
       <div className="px-6 py-4 border-b border-gray-100 dark:border-slate-700 flex items-start justify-between">
         <div>
           <h3 className="font-semibold text-gray-900 dark:text-slate-100 text-sm">{title}</h3>
-          <p className="text-xs text-gray-400 dark:text-slate-500 mt-0.5">{description}</p>
+          <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5">{description}</p>
         </div>
         <button
           onClick={() => downloadCSV(templateRows, templateFile)}
@@ -295,7 +295,7 @@ function ImportCard({
         <div>
           <label className="block text-xs font-medium text-gray-600 dark:text-slate-400 mb-1.5">Upload CSV file</label>
           <label className="flex items-center gap-3 border-2 border-dashed border-gray-200 dark:border-slate-600 rounded-lg px-4 py-3 cursor-pointer hover:border-indigo-300 dark:hover:border-indigo-500 hover:bg-indigo-50/30 dark:hover:bg-indigo-900/10 transition-colors">
-            <FileText size={18} className="text-gray-400 dark:text-slate-500 shrink-0" />
+            <FileText size={18} className="text-gray-500 dark:text-slate-400 shrink-0" />
             <span className="text-sm text-gray-500 dark:text-slate-400 truncate">{file ? file.name : 'Click to choose CSV file…'}</span>
             <input type="file" accept=".csv,text/csv" onChange={handleFile} className="hidden" />
           </label>
@@ -309,7 +309,7 @@ function ImportCard({
                 <thead>
                   <tr className="bg-gray-50 dark:bg-slate-900/50 border-b border-gray-200 dark:border-slate-700">
                     {columns.map((c) => (
-                      <th key={c} className="px-3 py-2 text-left font-semibold text-gray-500 dark:text-slate-400 uppercase text-[10px] tracking-wider whitespace-nowrap">{c}</th>
+                      <th key={c} className="px-3 py-2 text-left font-semibold text-gray-500 dark:text-slate-400 uppercase text-[11px] tracking-wider whitespace-nowrap">{c}</th>
                     ))}
                   </tr>
                 </thead>
@@ -318,7 +318,7 @@ function ImportCard({
                     <tr key={i} className="hover:bg-gray-50 dark:hover:bg-slate-700/40">
                       {columns.map((c) => (
                         <td key={c} className="px-3 py-2 text-gray-700 dark:text-slate-300 whitespace-nowrap max-w-[160px] truncate">
-                          {row[c.toLowerCase()] || <span className="text-gray-300 dark:text-slate-600">—</span>}
+                          {row[c.toLowerCase()] || <span className="text-gray-500 dark:text-slate-500">—</span>}
                         </td>
                       ))}
                     </tr>
@@ -330,7 +330,7 @@ function ImportCard({
         )}
 
         <div className="flex items-center justify-between">
-          <p className="text-xs text-gray-400 dark:text-slate-500">
+          <p className="text-xs text-gray-500 dark:text-slate-400">
             {allRows.length > 0 ? `${allRows.length} rows ready to import` : 'Upload a CSV to preview before importing'}
           </p>
           <button
@@ -425,7 +425,7 @@ export default function Settings() {
     <div className="p-4 sm:p-8 max-w-3xl mx-auto">
       <div className="mb-7">
         <h1 className="text-2xl font-bold text-gray-900 dark:text-slate-100">Settings</h1>
-        <p className="text-gray-400 dark:text-slate-500 text-sm mt-1">Manage themes and bulk import data from CSV files.</p>
+        <p className="text-gray-500 dark:text-slate-400 text-sm mt-1">Manage themes and bulk import data from CSV files.</p>
       </div>
 
       <div className="space-y-5">
