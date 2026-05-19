@@ -38,6 +38,17 @@ function todayDayInMonth(m: string): number | null {
   if (now.getFullYear() === y && now.getMonth() + 1 === mo) return now.getDate();
   return null;
 }
+function firstActionableDayInMonth(m: string): number | null {
+  const now = new Date();
+  const [y, mo] = m.split('-').map(Number);
+  const currentYear = now.getFullYear();
+  const currentMonth = now.getMonth() + 1;
+  if (y < currentYear || (y === currentYear && mo < currentMonth)) return null;
+  if (y === currentYear && mo === currentMonth) return now.getDate();
+  return 1;
+}
+
+type RosterHighlight = 'open' | 'leave' | 'off' | 'coverage' | null;
 
 // ─── Component ───────────────────────────────────────────────────────────────
 export default function TeamRoster() {
@@ -46,6 +57,10 @@ export default function TeamRoster() {
   const [searchParams, setSearchParams] = useSearchParams();
 
   const [month, setMonth] = useState(searchParams.get('month') || toMonthStr(new Date()));
+  const [attentionHighlight, setAttentionHighlight] = useState<RosterHighlight>(() => {
+    const value = searchParams.get('attention');
+    return value === 'open' || value === 'leave' || value === 'off' || value === 'coverage' ? value : null;
+  });
   const [team, setTeam] = useState<Team | null>(null);
   const [apiEntries, setApiEntries] = useState<ApiEntry[]>([]);
   const [allEmployees, setAllEmployees] = useState<Employee[]>([]);
@@ -90,6 +105,11 @@ export default function TeamRoster() {
     setSearchParams((p) => { p.set('month', month); return p; }, { replace: true });
   }, [month]);
 
+  useEffect(() => {
+    const value = searchParams.get('attention');
+    setAttentionHighlight(value === 'open' || value === 'leave' || value === 'off' || value === 'coverage' ? value : null);
+  }, [searchParams]);
+
   const fetchData = useCallback(async () => {
     if (!teamId) return;
     setLoading(true);
@@ -119,6 +139,15 @@ export default function TeamRoster() {
     setDatePickerPos(null);
   }, [month]);
 
+  useEffect(() => {
+    if (attentionHighlight !== 'open') return;
+    const firstActionableDay = firstActionableDayInMonth(month);
+    if (!firstActionableDay) return;
+    const total = buildDayHeaders(month).length;
+    setDateFrom(firstActionableDay);
+    setDateTo(total);
+  }, [attentionHighlight, month]);
+
   // Close cell popover on outside click / scroll
   useEffect(() => {
     if (!popoverCell) return;
@@ -144,12 +173,14 @@ export default function TeamRoster() {
   // ─── Derived grid data ───────────────────────────────────────────────────
   const headers = buildDayHeaders(month);
   const todayDay = todayDayInMonth(month);
+  const firstActionableDay = firstActionableDayInMonth(month);
+  const isActionableDay = (day: number) => firstActionableDay !== null && day >= firstActionableDay;
 
   const empMap = new Map<number, { emp: Employee; days: Record<number, DayEntry> }>();
   for (const e of apiEntries) {
     if (!empMap.has(e.employee_id)) {
       empMap.set(e.employee_id, {
-        emp: { id: e.employee_id, name: e.name, emp_code: e.emp_code || '', job_title: e.job_title || '' },
+        emp: { id: e.employee_id, name: e.name, emp_code: e.emp_code || '', job_title: e.job_title || '', team_id: Number(teamId) },
         days: {},
       });
     }
@@ -158,7 +189,7 @@ export default function TeamRoster() {
   }
 
   const rows = Array.from(empMap.values()).sort((a, b) => a.emp.name.localeCompare(b.emp.name));
-  const assignedIds = new Set(empMap.keys());
+  const assignedIds = new Set(apiEntries.map((entry) => entry.employee_id));
   const unassignedEmployees = allEmployees.filter(
     (e) => !assignedIds.has(e.id) && e.team_id === Number(teamId)
   );
@@ -184,9 +215,37 @@ export default function TeamRoster() {
   const isTodayActive = todayDay !== null && clampedFrom === todayDay && clampedTo === todayDay;
   const isFullMonth = clampedFrom === 1 && clampedTo === headers.length;
   const hasActiveFilters = empSearch !== '' || shiftFilter !== 'all' || !isFullMonth;
+  const coverageGapDays = new Set<number>();
+  for (const h of headers) {
+    if (!isActionableDay(h.num)) continue;
+    const dayShifts = new Set(rows.map((row) => row.days[h.num]?.shift_code).filter(Boolean));
+    const hasMorning = dayShifts.has('MS');
+    const hasGeneral = dayShifts.has('GS');
+    const hasAfternoon = dayShifts.has('AS');
+    const hasNight = dayShifts.has('NS');
+    if (!hasMorning || (!hasGeneral && !(hasMorning && hasAfternoon)) || !hasAfternoon || !hasNight) {
+      coverageGapDays.add(h.num);
+    }
+  }
+
+  const highlightLabel =
+    attentionHighlight === 'open' ? 'Open roster slots are highlighted'
+    : attentionHighlight === 'coverage' ? 'Shift coverage gaps are highlighted'
+    : attentionHighlight === 'leave' ? 'Leave entries are highlighted'
+    : attentionHighlight === 'off' ? 'Week-off entries are highlighted'
+    : '';
 
   const clearFilters = () => {
     setEmpSearch(''); setShiftFilter('all'); setDateFrom(1); setDateTo(headers.length);
+  };
+
+  const clearAttentionHighlight = () => {
+    setAttentionHighlight(null);
+    setSearchParams((p) => {
+      p.delete('attention');
+      p.set('month', month);
+      return p;
+    }, { replace: true });
   };
 
   const handleTodayClick = () => {
@@ -272,7 +331,8 @@ export default function TeamRoster() {
     try {
       await api.delete(`/roster/employee/${removeTarget.id}?team_id=${teamId}&month=${month}`);
       setRemoveTarget(null);
-      fetchData();
+      if (attentionHighlight) clearAttentionHighlight();
+      await fetchData();
     } catch (err: any) {
       setError(err.response?.data?.error || 'Failed to remove employee');
       setRemoveTarget(null);
@@ -301,7 +361,7 @@ export default function TeamRoster() {
       {/* ── Header bar ───────────────────────────────────────────────────── */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 shrink-0">
         <div className="flex items-center gap-3">
-          <button onClick={() => navigate('/')} className="text-gray-400 hover:text-gray-600 dark:text-slate-500 dark:hover:text-slate-300 transition-colors">
+          <button onClick={() => navigate(`/team/${teamId}/dashboard`)} className="text-gray-400 hover:text-gray-600 dark:text-slate-500 dark:hover:text-slate-300 transition-colors">
             <ArrowLeft size={20} />
           </button>
           <div>
@@ -377,6 +437,13 @@ export default function TeamRoster() {
         <div className="mx-6 mt-3 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 text-sm px-4 py-2.5 rounded-lg flex items-center justify-between shrink-0">
           {error}
           <button onClick={() => setError('')}><X size={14} /></button>
+        </div>
+      )}
+
+      {attentionHighlight && (
+        <div className="mx-4 sm:mx-6 mt-3 bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-800 text-indigo-800 dark:text-indigo-300 text-sm px-4 py-2.5 rounded-lg flex items-center justify-between gap-3 shrink-0">
+          <span>{highlightLabel}. Follow the breathing cells to see where action is needed.</span>
+          <button onClick={clearAttentionHighlight} className="text-xs font-semibold hover:underline shrink-0">Clear</button>
         </div>
       )}
 
@@ -521,6 +588,9 @@ export default function TeamRoster() {
                     <th
                       key={h.num}
                       onMouseEnter={() => setCrosshair({ empId: null, day: h.num })}
+                      onClick={() => {
+                        if (attentionHighlight === 'coverage' && coverageGapDays.has(h.num)) clearAttentionHighlight();
+                      }}
                       className={`px-0 py-1.5 text-center border-r border-gray-200 dark:border-slate-600 transition-colors ${
                         crosshair.day === h.num
                           ? 'bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300'
@@ -529,7 +599,7 @@ export default function TeamRoster() {
                           : h.isWeekend
                           ? 'bg-blue-50 text-blue-600 dark:bg-transparent dark:text-blue-400'
                           : 'text-gray-500 dark:text-slate-400'
-                      }`}
+                      } ${attentionHighlight === 'coverage' && coverageGapDays.has(h.num) ? 'attention-breathe cursor-pointer' : ''}`}
                     >
                       <div className="text-xs font-bold leading-tight">{h.num}</div>
                       <div className="text-[11px] font-normal opacity-60">{h.dow}</div>
@@ -580,6 +650,13 @@ export default function TeamRoster() {
                       const cfg = sc ? SHIFT_CODES[sc] : null;
                       const isOpen = popoverCell?.employeeId === emp.id && popoverCell?.day === h.num;
                       const isToday = h.num === todayDay;
+                      const isActionable = isActionableDay(h.num);
+                      const shouldBreathe =
+                        attentionHighlight === 'open' ? isActionable && !entry
+                        : attentionHighlight === 'coverage' ? coverageGapDays.has(h.num)
+                        : attentionHighlight === 'leave' ? isActionable && sc === 'EL'
+                        : attentionHighlight === 'off' ? isActionable && sc === 'WO'
+                        : false;
 
                       const isRowHit = crosshair.empId === emp.id;
                       const isColHit = crosshair.day === h.num;
@@ -592,7 +669,6 @@ export default function TeamRoster() {
                           className={`p-0 relative border-r border-gray-200 dark:border-slate-600 ${isToday ? 'bg-indigo-50/30 dark:bg-indigo-900/20' : h.isWeekend ? 'bg-blue-50/20 dark:bg-blue-900/10' : ''}`}
                         >
                           <button
-                            onClick={(e) => handleCellClick(e, emp.id, h.num)}
                             className={`relative z-[1] w-full h-8 flex items-center justify-center text-[11px] font-bold select-none transition-colors
                               ${cfg
                                 ? cfg.cellBg
@@ -602,7 +678,12 @@ export default function TeamRoster() {
                               }
                               ${!editMode ? 'cursor-default' : ''}
                               ${isOpen && editMode ? 'outline outline-2 outline-indigo-400 outline-offset-[-2px] z-10' : ''}
+                              ${shouldBreathe ? 'attention-breathe' : ''}
                             `}
+                            onClick={(e) => {
+                              if (shouldBreathe && attentionHighlight) clearAttentionHighlight();
+                              handleCellClick(e, emp.id, h.num);
+                            }}
                             title={editMode ? (cfg ? `${cfg.label}${cfg.time ? ' · ' + cfg.time : ''}` : 'Click to assign') : cfg?.label}
                           >
                             {sc ?? (editMode

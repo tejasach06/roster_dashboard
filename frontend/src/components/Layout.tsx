@@ -36,7 +36,7 @@ function SidebarContent({ onNavClick, user, isAdmin, isDark, toggleTheme, onLogo
         </NavLink>
 
         {!isAdmin && user?.team_id && (
-          <NavLink to={`/team/${user.team_id}`} className={navClass} onClick={onNavClick}>
+          <NavLink to={`/team/${user.team_id}/dashboard`} className={navClass} onClick={onNavClick}>
             <Users size={18} /> My Team
           </NavLink>
         )}

@@ -25,6 +25,14 @@ function createEmployee(name: string, empCode: string, teamId: number | null) {
     .prepare('INSERT INTO employees (name, emp_code, team_id) VALUES (?, ?, ?)')
     .run(name, empCode, teamId).lastInsertRowid as number;
 }
+function toMonthStr(date: Date) {
+  return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, '0')}`;
+}
+function shiftMonth(month: string, delta: number) {
+  const [year, monthIndex] = month.split('-').map(Number);
+  const date = new Date(Date.UTC(year, monthIndex - 1 + delta, 1));
+  return toMonthStr(date);
+}
 
 beforeAll(async () => {
   tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'roster-api-test-'));
@@ -193,6 +201,107 @@ describe('roster import', () => {
     expect(entries).toEqual([
       { employee_id: employeeId, team_id: alphaId, shift_code: 'GS', date: '2026-05-01' },
     ]);
+  });
+});
+
+describe('roster dashboard overview', () => {
+  it('summarizes coverage, open slots, shift mix, and next-seven workload', async () => {
+    const teamId = createTeam('Support Alpha');
+    const aliceId = createEmployee('Alice', 'A100', teamId);
+    const bobId = createEmployee('Bob', 'B100', teamId);
+    createEmployee('Charlie', 'C100', teamId);
+
+    db.prepare(
+      `INSERT INTO roster_entries (employee_id, team_id, shift_code, date) VALUES (?, ?, ?, ?)`
+    ).run(aliceId, teamId, 'GS', '2026-06-01');
+    db.prepare(
+      `INSERT INTO roster_entries (employee_id, team_id, shift_code, date) VALUES (?, ?, ?, ?)`
+    ).run(aliceId, teamId, 'WO', '2026-06-02');
+    db.prepare(
+      `INSERT INTO roster_entries (employee_id, team_id, shift_code, date) VALUES (?, ?, ?, ?)`
+    ).run(bobId, teamId, 'EL', '2026-06-01');
+
+    const res = await request(app)
+      .get('/api/roster/overview?month=2026-06')
+      .set(auth())
+      .expect(200);
+
+    expect(res.body.month).toBe('2026-06');
+    expect(res.body.days_in_month).toBe(30);
+    expect(res.body.teams).toHaveLength(1);
+    expect(res.body.teams[0]).toMatchObject({
+      team_id: teamId,
+      team_name: 'Support Alpha',
+      employee_count: 3,
+      roster_employee_count: 2,
+      planned_slots: 60,
+      scheduled_days: 3,
+      work_days: 1,
+      off_days: 1,
+      leave_days: 1,
+      open_slots: 57,
+      coverage_pct: 5,
+      shift_counts: { MS: 0, GS: 1, AS: 0, NS: 0, WO: 1, EL: 1 },
+    });
+  });
+
+  it('flags missing morning coverage without treating staffed night shifts as risky', async () => {
+    const teamId = createTeam('Support Alpha');
+    const aliceId = createEmployee('Alice', 'A100', teamId);
+    const bobId = createEmployee('Bob', 'B100', teamId);
+    const charlieId = createEmployee('Charlie', 'C100', teamId);
+    const futureMonth = shiftMonth(toMonthStr(new Date()), 1);
+
+    db.prepare(
+      `INSERT INTO roster_entries (employee_id, team_id, shift_code, date) VALUES (?, ?, ?, ?)`
+    ).run(aliceId, teamId, 'MS', `${futureMonth}-01`);
+    db.prepare(
+      `INSERT INTO roster_entries (employee_id, team_id, shift_code, date) VALUES (?, ?, ?, ?)`
+    ).run(bobId, teamId, 'AS', `${futureMonth}-01`);
+    db.prepare(
+      `INSERT INTO roster_entries (employee_id, team_id, shift_code, date) VALUES (?, ?, ?, ?)`
+    ).run(charlieId, teamId, 'NS', `${futureMonth}-01`);
+    db.prepare(
+      `INSERT INTO roster_entries (employee_id, team_id, shift_code, date) VALUES (?, ?, ?, ?)`
+    ).run(bobId, teamId, 'AS', `${futureMonth}-02`);
+    db.prepare(
+      `INSERT INTO roster_entries (employee_id, team_id, shift_code, date) VALUES (?, ?, ?, ?)`
+    ).run(charlieId, teamId, 'NS', `${futureMonth}-02`);
+
+    const res = await request(app)
+      .get(`/api/roster/overview?month=${futureMonth}`)
+      .set(auth())
+      .expect(200);
+
+    expect(res.body.teams[0]).toMatchObject({
+      coverage_risk_days: 1,
+      coverage_risk_entries: 2,
+      shift_counts: { MS: 1, GS: 0, AS: 2, NS: 2, WO: 0, EL: 0 },
+    });
+  });
+
+  it('ignores roster discrepancies in months before today', async () => {
+    const teamId = createTeam('Support Alpha');
+    const employeeId = createEmployee('Alice', 'A100', teamId);
+    const pastMonth = shiftMonth(toMonthStr(new Date()), -1);
+
+    db.prepare(
+      `INSERT INTO roster_entries (employee_id, team_id, shift_code, date) VALUES (?, ?, ?, ?)`
+    ).run(employeeId, teamId, 'GS', `${pastMonth}-01`);
+
+    const res = await request(app)
+      .get(`/api/roster/overview?month=${pastMonth}`)
+      .set(auth())
+      .expect(200);
+
+    expect(res.body.teams[0]).toMatchObject({
+      planned_slots: 0,
+      scheduled_days: 0,
+      work_days: 0,
+      open_slots: 0,
+      coverage_pct: null,
+      shift_counts: { MS: 0, GS: 0, AS: 0, NS: 0, WO: 0, EL: 0 },
+    });
   });
 });
 

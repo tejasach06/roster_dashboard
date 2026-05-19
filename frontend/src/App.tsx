@@ -27,6 +27,7 @@ function AppRoutes() {
     <Routes>
       <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
       <Route path="/" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
+      <Route path="/team/:teamId/dashboard" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
       <Route path="/team/:teamId" element={<PrivateRoute><TeamRoster /></PrivateRoute>} />
       <Route path="/settings" element={<PrivateRoute adminOnly><AdminPanel /></PrivateRoute>} />
       <Route path="/admin" element={<Navigate to="/settings" replace />} />

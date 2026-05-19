@@ -6,6 +6,7 @@ const router = Router();
 
 const VALID_CODES = ['MS', 'GS', 'AS', 'NS', 'WO', 'EL'];
 const MONTH_RE = /^\d{4}-(0[1-9]|1[0-2])$/;
+const WORK_CODES = ['MS', 'GS', 'AS', 'NS'];
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 function daysInMonth(year: number, month: number) {
@@ -26,6 +27,24 @@ function monthBounds(month: string) {
   const [y, m] = month.split('-').map(Number);
   const last = daysInMonth(y, m);
   return { start: `${month}-01`, end: `${month}-${String(last).padStart(2, '0')}`, last };
+}
+function inclusiveDayCount(start: string, end: string) {
+  const startTime = new Date(`${start}T00:00:00.000Z`).getTime();
+  const endTime = new Date(`${end}T00:00:00.000Z`).getTime();
+  return Math.max(Math.floor((endTime - startTime) / 86_400_000) + 1, 0);
+}
+function missingCoverageRequirements(shiftCounts: Map<string, number>) {
+  const hasMorning = (shiftCounts.get('MS') ?? 0) > 0;
+  const hasGeneral = (shiftCounts.get('GS') ?? 0) > 0;
+  const hasAfternoon = (shiftCounts.get('AS') ?? 0) > 0;
+  const hasNight = (shiftCounts.get('NS') ?? 0) > 0;
+  const missing: string[] = [];
+
+  if (!hasMorning) missing.push('MS');
+  if (!hasGeneral && !(hasMorning && hasAfternoon)) missing.push('GS');
+  if (!hasAfternoon) missing.push('AS');
+  if (!hasNight) missing.push('NS');
+  return missing;
 }
 function employeeBelongsToTeam(employeeId: unknown, teamId: number): boolean {
   const employee = db.prepare('SELECT team_id FROM employees WHERE id = ?').get(Number(employeeId)) as any;
@@ -61,6 +80,155 @@ router.get('/stats', authenticate, (req: AuthRequest, res) => {
      ORDER BY t.name`
   ).all(...params);
   res.json(rows);
+});
+
+// ── GET /roster/overview?month=YYYY-MM ───────────────────────────────────────
+// Operational dashboard: coverage, open slots, shift mix, and next-7-day load.
+router.get('/overview', authenticate, (req: AuthRequest, res) => {
+  const user = req.user!;
+  const monthParam = (req.query.month as string) || currentMonth();
+  if (!validMonth(monthParam)) return res.status(400).json({ error: 'month must be YYYY-MM' });
+
+  const { start, end, last } = monthBounds(monthParam);
+  const today = new Date().toISOString().slice(0, 10);
+  const activeStart = today > end ? null : today < start ? start : today;
+  const activeEnd = activeStart ? end : null;
+  const remainingDays = activeStart && activeEnd ? inclusiveDayCount(activeStart, activeEnd) : 0;
+  const nextStart = activeStart ?? start;
+  const nextEndDate = new Date(`${nextStart}T00:00:00.000Z`);
+  nextEndDate.setUTCDate(nextEndDate.getUTCDate() + 6);
+  const nextEndCandidate = nextEndDate.toISOString().slice(0, 10);
+  const nextEnd = activeStart ? (nextEndCandidate > end ? end : nextEndCandidate) : end;
+
+  const teamWhere = user.role === 'admin' ? '' : 'WHERE t.id = ?';
+  const teamParams = user.role === 'admin' ? [] : [user.team_id];
+
+  const teams = db.prepare(
+    `SELECT t.id AS team_id, t.name AS team_name, COUNT(e.id) AS employee_count
+     FROM teams t
+     LEFT JOIN employees e ON e.team_id = t.id
+     ${teamWhere}
+     GROUP BY t.id
+     ORDER BY t.name`
+  ).all(...teamParams) as Array<{ team_id: number; team_name: string; employee_count: number }>;
+
+  const rosterWhere = user.role === 'admin' ? '' : 'AND team_id = ?';
+  const rosterMemberParams: any[] = [start, end];
+  if (user.role !== 'admin') rosterMemberParams.push(user.team_id);
+  const rosterMemberRows = db.prepare(
+    `SELECT team_id, COUNT(DISTINCT employee_id) AS roster_employee_count
+     FROM roster_entries
+     WHERE date >= ? AND date <= ? ${rosterWhere}
+     GROUP BY team_id`
+  ).all(...rosterMemberParams) as Array<{ team_id: number; roster_employee_count: number }>;
+  const rosterMembersByTeam = new Map(rosterMemberRows.map((row) => [row.team_id, row.roster_employee_count]));
+
+  const shiftRows = activeStart && activeEnd
+    ? (() => {
+        const rosterParams: any[] = [activeStart, activeEnd];
+        if (user.role !== 'admin') rosterParams.push(user.team_id);
+        return db.prepare(
+          `SELECT team_id, shift_code, COUNT(*) AS count
+           FROM roster_entries
+           WHERE date >= ? AND date <= ? ${rosterWhere}
+           GROUP BY team_id, shift_code`
+        ).all(...rosterParams) as Array<{ team_id: number; shift_code: string; count: number }>;
+      })()
+    : [];
+
+  const nextRows = activeStart
+    ? (() => {
+        const nextParams: any[] = [nextStart, nextEnd];
+        if (user.role !== 'admin') nextParams.push(user.team_id);
+        return db.prepare(
+          `SELECT team_id, shift_code, COUNT(*) AS count
+           FROM roster_entries
+           WHERE date >= ? AND date <= ? ${rosterWhere}
+           GROUP BY team_id, shift_code`
+        ).all(...nextParams) as Array<{ team_id: number; shift_code: string; count: number }>;
+      })()
+    : [];
+
+  const dateShiftRows = activeStart && activeEnd
+    ? (() => {
+        const dateShiftParams: any[] = [activeStart, activeEnd];
+        if (user.role !== 'admin') dateShiftParams.push(user.team_id);
+        return db.prepare(
+          `SELECT team_id, date, shift_code, COUNT(*) AS count
+           FROM roster_entries
+           WHERE date >= ? AND date <= ? ${rosterWhere}
+             AND shift_code IN (${WORK_CODES.map(() => '?').join(', ')})
+           GROUP BY team_id, date, shift_code`
+        ).all(...dateShiftParams, ...WORK_CODES) as Array<{ team_id: number; date: string; shift_code: string; count: number }>;
+      })()
+    : [];
+
+  const byTeam = new Map<number, any>();
+  for (const team of teams) {
+    const roster_employee_count = rosterMembersByTeam.get(team.team_id) ?? 0;
+    const planned_slots = roster_employee_count * remainingDays;
+    byTeam.set(team.team_id, {
+      ...team,
+      roster_employee_count,
+      planned_slots,
+      scheduled_days: 0,
+      work_days: 0,
+      off_days: 0,
+      leave_days: 0,
+      open_slots: planned_slots,
+      coverage_pct: planned_slots > 0 ? 0 : null,
+      coverage_risk_days: 0,
+      coverage_risk_entries: 0,
+      next_7: { start: nextStart, end: nextEnd, work_days: 0, off_days: 0, leave_days: 0, scheduled_days: 0 },
+      shift_counts: { MS: 0, GS: 0, AS: 0, NS: 0, WO: 0, EL: 0 },
+    });
+  }
+
+  for (const row of shiftRows) {
+    const team = byTeam.get(row.team_id);
+    if (!team || !VALID_CODES.includes(row.shift_code)) continue;
+    team.shift_counts[row.shift_code] = row.count;
+    team.scheduled_days += row.count;
+    if (row.shift_code === 'WO') team.off_days += row.count;
+    else if (row.shift_code === 'EL') team.leave_days += row.count;
+    else team.work_days += row.count;
+  }
+
+  for (const row of nextRows) {
+    const team = byTeam.get(row.team_id);
+    if (!team || !VALID_CODES.includes(row.shift_code)) continue;
+    team.next_7.scheduled_days += row.count;
+    if (row.shift_code === 'WO') team.next_7.off_days += row.count;
+    else if (row.shift_code === 'EL') team.next_7.leave_days += row.count;
+    else team.next_7.work_days += row.count;
+  }
+
+  const dayCoverage = new Map<number, Map<string, Map<string, number>>>();
+  for (const row of dateShiftRows) {
+    if (!dayCoverage.has(row.team_id)) dayCoverage.set(row.team_id, new Map());
+    const teamDays = dayCoverage.get(row.team_id)!;
+    if (!teamDays.has(row.date)) teamDays.set(row.date, new Map());
+    teamDays.get(row.date)!.set(row.shift_code, row.count);
+  }
+
+  for (const [teamId, teamDays] of dayCoverage.entries()) {
+    const team = byTeam.get(teamId);
+    if (!team) continue;
+    for (const shiftCounts of teamDays.values()) {
+      const missing = missingCoverageRequirements(shiftCounts);
+      if (missing.length === 0) continue;
+      team.coverage_risk_days += 1;
+      team.coverage_risk_entries += missing.length;
+    }
+  }
+
+  const overview = Array.from(byTeam.values()).map((team) => {
+    team.open_slots = Math.max(team.planned_slots - team.scheduled_days, 0);
+    team.coverage_pct = team.planned_slots > 0 ? Math.round((team.scheduled_days / team.planned_slots) * 100) : null;
+    return team;
+  });
+
+  res.json({ month: monthParam, days_in_month: last, teams: overview });
 });
 
 // ── GET /roster/team/:teamId?month=YYYY-MM ───────────────────────────────────
